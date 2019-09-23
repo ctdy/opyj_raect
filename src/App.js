@@ -2,7 +2,6 @@
  * 应用的组件
  */
 import React,{Component} from 'react'
-import {Button, message} from "antd";
 import {BrowserRouter,Route,Switch,HashRouter} from 'react-router-dom';
 
 import Login from "./pages/login/login";

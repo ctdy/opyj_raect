@@ -1,11 +1,14 @@
 import React,{Component} from "react";
 import './login.less'
 import logo from './images/logo.png'
-import {Form,Icon,Input,Button} from "antd";
+import {Form, Icon, Input, Button, message} from "antd";
+import {reqLogin,reqAddUser} from '../../api'
+import memoryUtils from "../../utils/memoryUtils";
+import {Redirect} from 'react-router-dom'
+import storageUtils from "../../utils/storageUtils";
 
 const Item = Form.Item //不能写在import之前
 class Login extends Component {
-
     handleSubmit = (e) => {
         //阻止事件的默认行为
          e.preventDefault()
@@ -14,9 +17,38 @@ class Login extends Component {
          // const values = form.getFieldsValue()
          //     console.log('handleSubmit',values);
         //对所有表单字段进行验证
-        this.props.form.validateFields((err, values) => {
+        this.props.form.validateFields(async (err, values) => {
             if (!err) {
-                console.log('提交ajax请求: ', values);
+                //username,password不能随便命名，要和下面的username和password标识名一致
+                 const {username,password} = values
+                // reqLogin(username,password).then(response =>{
+                //     console.log('成功',response.data)
+                // }).catch(error => {
+                //     console.log('失败')
+                // })
+                     //y用同步编码实现异步执行
+                    const result = await reqLogin(username,password)
+                    // console.log('请求成功',response.data)
+                // const result = response.data //{status:0,data:user} ,{status:1,msg:xxx}
+                if (result.status === 0){
+                    //提示登陆成功
+                    message.success('成功了')
+
+                    const user = result.data
+                    //存到内存里去
+                    memoryUtils.user = user
+
+                    storageUtils.saveUser(user)
+                    console.log('store',storageUtils.getUser())
+
+                    //跳转路由到管理界面
+                    //在事件回调函数中实现跳转
+                    this.props.history.replace('/Admin')
+
+                }else {
+                    message.error(result.msg)
+                }
+                // console.log('提交ajax请求: ', values);
             }else{
                 console.log('校验失败')
             }
@@ -29,13 +61,16 @@ class Login extends Component {
             callback('密码必须大于4')
         }else if(value.length > 12){
             callback('密码必须小于12')
-        }else if(/^[a-zA-Z0-9_]+$/.test(value)) {
-            callback('密码必须是英文、数字或者下划线组成')
         }else
 //        callback('vslidatePwd',rule,value)  //验证通过
         callback()  //验证失败，输出xxxx
     }
     render() {
+        const user = storageUtils.getUser()
+        console.log('login',user)
+        if(user && user._id){
+            return <Redirect to='/Admin'/>
+        }
         //得到具有强大功能的from对象
         //const form = this.props.form
         const {getFieldDecorator} = this.props.form
@@ -122,5 +157,14 @@ export default WrapLogin
 /*
 1、前台表单验证
 2、收集表单数据
-3、
+ */
+/*
+async和await
+1. 作用？
+    简化promise对象的使用: 不用再使用then()来指定成功/失败的回调函数
+    以同步编码(没有回调函数了)方式实现异步流程   (看到回调函数就是异步执行)
+2. 哪里用await？
+    再返回promise的表达式左侧写await： 不想要promise， 想要promise异步执行得到的value
+3. 哪里写async？
+    await所在函数（最近的）定义的左侧写async
  */
